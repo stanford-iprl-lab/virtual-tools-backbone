@@ -1,0 +1,12 @@
+certifi==2022.6.15
+cffi==1.15.1
+numpy==1.23.1
+pip==22.1.2
+pycparser==2.21
+pygame==2.1.2
+pymunk==6.2.1
+PyMySQL==1.0.2
+scipy==1.8.1
+setuptools==61.2.0
+six==1.16.0
+wheel==0.37.1
