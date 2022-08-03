@@ -8,7 +8,6 @@ setuptools.setup(
     version="0.1",
     author="Kevin A Smith",
     author_email="k2smith@mit.edu",
-    packages=['virtualtools'],
     description="Code for running instances of Virtual Tools",
     long_description=long_description,
     long_description_content_type="text/markdown",
