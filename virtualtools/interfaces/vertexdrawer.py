@@ -1,5 +1,6 @@
 from typing import Tuple, Annotated, Dict
 from .vtinterface import VTInterface, place_object_by_vertex_list
+from ..world import VTWorld
 from geometry import check_counterclockwise
 
 __all__ = ['VertexDrawer']
