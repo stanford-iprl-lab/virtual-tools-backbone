@@ -29,7 +29,7 @@ class VTCond_AnyInGoal(VTCond_Base):
     def _goes_out(self, obj, goal):
         if (goal.name == self.goal and \
             obj.name in self.ins.keys() and \
-                    (not goal.pointIn(obj.position))):
+                    (not goal.point_in(obj.position))):
             del self.ins[obj.name]
 
     def attach_hooks(self):
@@ -95,7 +95,8 @@ class VTCond_SpecificInGoal(VTCond_Base):
             self.tin = self.parent.time
 
     def _goes_out(self, obj, goal):
-        if goal.name == self.goal and obj.name == self.obj and (not goal.point_in(obj.position)):
+        if goal.name == self.goal and obj.name == self.obj and \
+                (not goal.point_in(obj.position)):
             self.tin = -1
 
     def attach_hooks(self):

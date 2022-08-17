@@ -1,8 +1,9 @@
 import pymunk as pm
 import numpy as np
+from geometry import convex_area, convex_centroid, recenter_polygon, check_counterclockwise
 from .constants import *
 from .abstracts import VTObject
-from ..helpers import *
+from ..helpers import verts_to_vec2d, poly_to_vec2d, area_for_segment, segs_to_poly
 import pdb
 import copy
 
@@ -15,10 +16,9 @@ class VTPoly(VTObject):
                  friction=DEFAULT_FRICTION,color=DEFAULT_COLOR):
         VTObject.__init__(self, name, "Poly", space, color, density, friction, elasticity)
 
-        #vertices = map(lambda v: map(float, v), vertices)
         vertices = [[float(vp) for vp in v] for v in vertices]
-        loc = centroid_for_poly(vertices)
-        self.area = area_for_poly(vertices)
+        loc = verts_to_vec2d(convex_centroid(vertices))
+        self.area = convex_area(vertices)
         mass = density * self.area
 
         if mass == 0:
@@ -29,7 +29,7 @@ class VTPoly(VTObject):
             self._cpShape.name = name
             space.add(self._cpShape)
         else:
-            recenter_poly(vertices)
+            vertices = poly_to_vec2d(recenter_polygon(vertices))
             imom = pm.moment_for_poly(mass, vertices)
             self._cpBody = pm.Body(mass, imom)
             self._cpShape = pm.Poly(self._cpBody, vertices)
@@ -61,7 +61,7 @@ class VTPoly(VTObject):
     def get_pos(self):
         if self.is_static():
             vertices = [[float(vp) for vp in v] for v in self.vertices]
-            return centroid_for_poly(vertices)
+            return convex_centroid(vertices)
         else:
             return np.array(self._cpBody.position)
 
@@ -178,11 +178,11 @@ class VTContainer(VTObject):
         self.outer_color = outer_color
         self.r = width / 2
 
-        loc = centroid_for_poly(ptlist)
+        loc = verts_to_vec2d(convex_centroid(ptlist))
         self.pos = np.array([loc.x, loc.y])
         ptlist = copy.deepcopy(ptlist)
         if density != 0:
-            ptlist = recenter_poly(ptlist)
+            ptlist = recenter_polygon(ptlist)
         #self.seglist = map(lambda p: pm.Vec2d(p), ptlist)
         self.seglist = [verts_to_vec2d(p) for p in ptlist]
 
@@ -215,10 +215,10 @@ class VTContainer(VTObject):
             space.add(pshp)
 
         # Make sure we have ccw
-        if not poly_validate(ptlist):
+        if not check_counterclockwise(ptlist):
             ptlist.reverse()
 
-        self._cpSensor = pm.Poly(uBody, ptlist)
+        self._cpSensor = pm.Poly(uBody, poly_to_vec2d(ptlist))
         self._cpSensor.sensor = True
         self._cpSensor.collision_type = COLTYPE_SENSOR
         self._cpSensor.name = name
@@ -237,7 +237,7 @@ class VTContainer(VTObject):
             for i in range(len(self.polylist)):
                 tpol = []
                 for j in range(len(self.polylist[i])):
-                    vj = pm.Vec2d(self.polylist[i][j])
+                    vj = verts_to_vec2d(self.polylist[i][j])
                     tpol.append(np.array(pos + vj.rotated(rot)))
                 polys.append(tpol)
         return polys
@@ -259,7 +259,7 @@ class VTContainer(VTObject):
 
     def point_in(self, p):
         v = pm.Vec2d(p[0], p[1])
-        return self._cpSensor.point_query(v)
+        return self._cpSensor.point_query(v).distance < 0
 
     def get_friction(self):
         return self._cpPolyShapes[0].friction
@@ -313,8 +313,8 @@ class VTCompound(VTObject):
             polyCents = []
             areas = []
             for vertices in polygons:
-                polyCents.append(centroid_for_poly(vertices))
-                areas.append(area_for_poly(vertices))
+                polyCents.append(verts_to_vec2d(convex_centroid(vertices)))
+                areas.append(convex_area(vertices))
                 sh = pm.Poly(space.static_body, vertices)
                 sh.elasticity = elasticity
                 sh.friction = friction
@@ -339,10 +339,10 @@ class VTCompound(VTObject):
             areas = []
             for i in range(len(polygons)):
                 vertices = polygons[i]
-                polyCents.append(centroid_for_poly(vertices))
-                vertices = recenter_poly(vertices)
-                polygons[i] = vertices
-                areas.append(area_for_poly(vertices))
+                polyCents.append(verts_to_vec2d(convex_centroid(vertices)))
+                vertices = recenter_polygon(vertices)
+                polygons[i] = poly_to_vec2d(vertices)
+                areas.append(convex_area(vertices))
             gx = gy = 0
             for pc, a in zip(polyCents, areas):
                 gx += pc[0] * a
@@ -354,7 +354,7 @@ class VTCompound(VTObject):
             imom = 0
             for pc, a, verts in zip(polyCents, areas, polygons):
                 pos = pm.Vec2d(pc[0] - loc.x, pc[1] - loc.y)
-                imom += pm.moment_for_poly(density*a, vertices, pos)
+                imom += pm.moment_for_poly(density*a, verts, pos)
                 rcverts = [pm.Vec2d(p[0]+pos.x, p[1]+pos.y) for p in verts]
                 self._cpShapes.append(pm.Poly(None, rcverts))
                 self.polylist.append(rcverts)
@@ -439,8 +439,7 @@ class VTGoal(VTObject):
         self._cpShape.collision_type = COLTYPE_SENSOR
         self._cpShape.name = name
         space.add(self._cpShape)
-        loc = centroid_for_poly(vertices)
-        self.pos = np.array([loc.x, loc.y])
+        self.pos = np.array(convex_centroid(vertices))
 
     def get_vertices(self):
         verts = [np.array(v) for v in self._cpShape.get_vertices()]
@@ -449,7 +448,7 @@ class VTGoal(VTObject):
 
     def point_in(self,p):
         v = pm.Vec2d(p[0], p[1])
-        return self._cpShape.point_query(v)
+        return self._cpShape.point_query(v).distance < 0
 
     def get_pos(self):
         return self.pos
@@ -465,8 +464,7 @@ class VTBlocker(VTObject):
         self._cpShape.collision_type = COLTYPE_BLOCKED
         self._cpShape.name = name
         space.add(self._cpShape)
-        loc = centroid_for_poly(vertices)
-        self.pos = np.array([loc.x, loc.y])
+        self.pos = np.array(convex_centroid(vertices))
 
     def get_vertices(self):
         verts = [np.array(v) for v in self._cpShape.get_vertices()]
@@ -475,7 +473,7 @@ class VTBlocker(VTObject):
 
     def point_in(self, p):
         v = pm.Vec2d(p[0], p[1])
-        return self._cpShape.point_query(v)
+        return self._cpShape.point_query(v).distance < 0
 
     def get_pos(self):
         return self.pos

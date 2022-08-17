@@ -3,6 +3,8 @@ from typing import Dict, Tuple, List
 import warnings
 from ..world import VTWorld, noisify_world, load_vt_from_dict
 from .running import run_game, get_path, get_state_path, get_collisions, get_geom_path, CollisionError
+from geometry import ear_clip, lines_intersect, check_counterclockwise, gift_wrap
+from ..helpers import any_line_intersections
 
 
 """
@@ -49,6 +51,58 @@ def place_object_by_polys(world: VTWorld,
         placed.append([(p[0]+position[0], p[1]+position[1]) for p in poly])
     world.add_placed_compound("PLACED", placed, (0,0,255))
     return world
+
+"""
+Places a shape defined by a set of polygons into a VTWorld with the name "PLACED"
+
+Args:
+    world (VTWorld): the VTWorld to check for collisions
+    poly (List[Tuple[float, float]]): a list of vertices making a convex polygon. Polygons are defined as a set of CCW vertices. Vertices are defined relative to the placement point at (0, 0)
+    position (Tuple[float, float]): the position where the putative shape will be placed
+
+Returns:
+    VTWorld: a pointer to the same `world` input, with a new "PLACED" object
+"""
+
+def place_object_by_single_poly(world: VTWorld,
+                                poly: List[Tuple[float, float]],
+                                position: Tuple[float, float]
+                                ) -> VTWorld:
+    if check_collision_by_polys(world, [poly], position):
+        raise CollisionError()
+    placed = [(p[0]+position[0], p[1]+position[1]) for p in poly]
+    world.add_placed_poly("PLACED", placed, (0,0,255))
+    return world
+
+"""
+Places a shape defined by a set of ordered vertices into a VTWorld with the name "PLACED"
+
+Args:
+    world (VTWorld): the VTWorld to check for collisions
+    vertices (List[Tuple[float, float]]): a list of ordered vertices defining the concave hull of an object. The edges must not cross one another, and CCW winding is assumed. Vertices are defined relative to the placement point at (0, 0)
+    position (Tuple[float, float]): the position where the putative shape will be placed
+
+Returns:
+    VTWorld: a pointer to the same `world` input, with a new "PLACED" object
+"""
+
+def place_object_by_vertex_list(
+    world: VTWorld,
+    vertices: List[Tuple[float, float]],
+    position: Tuple[float, float]
+) -> VTWorld:
+    # Ensure this is a legal vertex set
+    assert check_counterclockwise(vertices),\
+        "Input to place_object_by_vertex_list must have CCW winding"
+    assert not any_line_intersections(vertices),\
+        "Segments defined by connecting vertices may not cross"
+    # Check if this can be a simple convex polygon
+    if len(vertices) == len(gift_wrap(vertices)):
+        return place_object_by_single_poly(world, vertices, position)
+    # Otherwise use ear clipping to make triangles from concave polys
+    else:
+        triangles = ear_clip(vertices)
+        return place_object_by_polys(world, triangles, position)
 
 
 class VTInterface(ABC):
