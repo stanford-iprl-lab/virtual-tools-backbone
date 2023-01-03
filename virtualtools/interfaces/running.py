@@ -131,7 +131,6 @@ def get_geom_path(gameworld: VTWorld,
     return pathdict, gameworld.check_end(), t
 
 
-
 """
 Run the game and keep track of object positions
 
@@ -164,6 +163,42 @@ def get_collisions(gameworld: VTWorld,
     collisions = filter_collision_events(gameworld.collision_events,
                                          collision_slop)
     return pathdict, collisions, gameworld.check_end(), t
+
+"""
+Run the game and return all info needed for 
+
+Returns tuple of:
+    Dict[(obj_name, List)]: a dictionary with keys being the names of each of the non-static objects in the world. Each entry is a list of lists, representing the updated vertices (in world coordinates) at each timestep)
+    List[float]: a list of the ``remaining time'' (with -1 signifying not in goal)
+    bool: whether the goal was accomplished
+    float: the time at which the world was stopped (due to solution or timeout)
+"""
+def get_game_outcomes(gameworld: VTWorld,
+             maxtime: float=20.,
+             step_size: float=0.1,
+             collision_slop: float=0.2001
+             ) -> Tuple[Dict, List, bool, float]:
+    running = True
+    t = 0
+    pathdict = dict()
+    tracknames = []
+    remtime = []
+    for onm, o in gameworld.objects.items():
+        if not o.is_static():
+            tracknames.append(onm)
+            pathdict[onm] = [[o.position[0], o.position[1], o.rotation, o.velocity[0], o.velocity[1]]]
+    while running:
+        gameworld.step(step_size)
+        t += step_size
+        for onm in tracknames:
+            pathdict[onm].append([gameworld.objects[onm].position[0], gameworld.objects[onm].position[1], gameworld.objects[onm].rotation, gameworld.objects[onm].velocity[0], gameworld.objects[onm].velocity[1]])
+        rt = gameworld.goal_cond.remaining_time()
+        if rt is None:
+            rt = -1
+        remtime.append(rt)
+        if gameworld.check_end() or (t >= maxtime):
+            running = False
+    return pathdict, remtime, gameworld.check_end(), t
 
 class CollisionError(Exception):
 

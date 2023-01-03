@@ -2,7 +2,8 @@ from abc import ABC, abstractmethod
 from typing import Dict, Tuple, List
 import warnings
 from ..world import VTWorld, noisify_world, load_vt_from_dict
-from .running import run_game, get_path, get_state_path, get_collisions, get_geom_path, CollisionError
+from .running import (run_game, get_path, get_state_path, get_collisions, 
+        get_geom_path, get_game_outcomes, CollisionError)
 from geometry import ear_clip, lines_intersect, check_counterclockwise, gift_wrap
 from ..helpers import any_line_intersections
 
@@ -237,6 +238,23 @@ class VTInterface(ABC):
         except CollisionError:
             return [None, None, -1] # Error code for illegal action
         return get_geom_path(w, maxtime, self.bts)
+    
+    def observe_game_path(self,
+                          action: Dict,
+                          noise: Dict=None,
+                          maxtime: float=None,
+                          stop_on_goal: bool=True,
+                          new_object_properties: Dict=None
+                          ) -> Tuple[Dict, List, bool, float]:
+        maxtime = maxtime or self._maxtime
+        try:
+            w = self._setup_world(action,
+                                  noise,
+                                  stop_on_goal,
+                                  new_object_properties)
+        except CollisionError:
+            return [None, None, None, -1] # Error code for illegal action
+        return get_game_outcomes(w, maxtime, self.bts)
 
     def observe_collision_events():
         raise NotImplementedError("TO IMPLEMENT")
