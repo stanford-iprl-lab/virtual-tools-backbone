@@ -29,6 +29,7 @@ def check_collision_by_polys(world: VTWorld,
             return True
     return False
 
+
 """
 Places a shape defined by a set of polygons into a VTWorld with the name "PLACED"
 
@@ -104,6 +105,27 @@ def place_object_by_vertex_list(
     else:
         triangles = ear_clip(vertices)
         return place_object_by_polys(world, triangles, position)
+    
+"""
+Places a ball shape into a VTWorld with the name "PLACED"
+
+Args:
+    world (VTWorld): the VTWorld to check for collisions
+    radius (float): a number indicating the radius of the ball in pixels
+    position (Tuple[float, float]): the position where the putative shape will be placed
+
+Returns:
+    VTWorld: a pointer to the same `world` input, with a new "PLACED" object
+"""
+
+def place_ball(world: VTWorld,
+                                radius: float,
+                                position: Tuple[float, float]
+                                ) -> VTWorld:
+    if world.check_circle_collision(position, radius):
+        raise CollisionError()
+    world.add_placed_circle("PLACED", position, radius, (0, 0, 255))
+    return world
 
 
 class VTInterface(ABC):

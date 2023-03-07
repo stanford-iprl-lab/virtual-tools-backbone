@@ -2,5 +2,8 @@ from .running import run_game, get_path, get_state_path, get_geom_path, get_coll
 from .vtinterface import VTInterface, check_collision_by_polys, place_object_by_polys, VTActionError
 from .toolpicker import ToolPicker, load_tool_picker
 from .vertexdrawer import VertexDrawer
+from .oneball import OneBall, load_one_ball
 
-__all__ = ['ToolPicker', 'load_tool_picker', 'VertexDrawer']
+__all__ = ['ToolPicker', 'load_tool_picker',
+           'OneBall', 'load_one_ball',
+           'VertexDrawer']

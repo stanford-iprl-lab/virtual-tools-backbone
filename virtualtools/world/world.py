@@ -269,6 +269,11 @@ class VTWorld(object):
         for cpsh in this_obj._cpShapes:
             cpsh.collision_type = COLTYPE_PLACED
         return this_obj
+    
+    def add_placed_circle(self, name, position, radius, color, density=None, elasticity=None, friction=None):
+        this_obj = self.add_ball(name, position, radius, color, density, elasticity, friction)
+        this_obj._cpShape.collision_type = COLTYPE_PLACED
+        return this_obj
 
     def add_block(self, name, bounds, color):
         assert name not in self.blockers.keys(), "Name already taken: " + name
