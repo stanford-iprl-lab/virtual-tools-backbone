@@ -10,10 +10,11 @@ class VTObject(ABC):
     def __init__(self, name, otype, space, color, density, friction, elasticity):
         assert otype in ['Ball','Poly','Segment','Container', 'Compound','Goal','Blocker'], \
             "Illegal 'type' of object"
+        from ..helpers.misc import word_to_color
         self.name = name
         self.type = otype
         self.space = space
-        self.color = color
+        self.color = word_to_color(color)
         self.density = density
         self._cpBody = None
         self._cpShape = None

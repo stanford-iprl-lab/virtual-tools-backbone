@@ -170,8 +170,7 @@ class VTInterface(ABC):
                         world: VTWorld) -> VTWorld:
         nworld = noisify_world(world, **noise)
         return self.place(action, nworld)
-
-
+    
     def _setup_world(self,
                       action: Dict,
                       noise: Dict=None,
