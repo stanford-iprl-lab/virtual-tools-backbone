@@ -58,11 +58,11 @@ def resize_tool(tool: List, scale_x: float = 1.0, scale_y: float = 1.0) -> List:
 class ToolPickerGenerator(VTGenerator):
     
     def generate_random_placement(self, toolpicker: ToolPicker):
-        rtool = random.select(toolpicker.toolnames)
+        rtool = random.choice(toolpicker.toolnames)
         w = toolpicker.worlddict
         maxx = w['dims'][0]
         maxy = w['dims'][1]
-        rpos = [random.randint(1, maxx - 1), radnom.randint(1, maxy - 1)]
+        rpos = [random.randint(1, maxx - 1), random.randint(1, maxy - 1)]
         return {
             'tool': rtool,
             'position': rpos

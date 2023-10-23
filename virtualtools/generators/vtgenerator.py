@@ -103,11 +103,12 @@ class VTGenerator(ABC):
     # Method that returns the proportion of random actions that are successful
     def _check_any_placement(self, interface: VTInterface) -> float:
         numsuc = 0
-        for _ in self._opts['nsims']:
+        for _ in range(self._opts['nsims']):
             act = self.generate_random_placement(interface)
             r = None
             # Ignore failed placements
             while r is None:
+                act = self.generate_random_placement(interface)
                 r = interface.run_placement(act)[0]
             if r:
                 numsuc += 1
@@ -116,10 +117,11 @@ class VTGenerator(ABC):
     # Method returning proportion of actions defined in random_specific_action that are successful
     def _check_specific_placement(self, interface: VTInterface) -> float:
         numsuc = 0
-        for _ in self._opts['nsims']:
+        for _ in range(self._opts['nsims']):
             act = self.random_specific_action(interface)
             r = None
             while r is None:
+                act = self.random_specific_action(interface)
                 r = interface.run_placement(act)[0]
             if r:
                 numsuc += 1
