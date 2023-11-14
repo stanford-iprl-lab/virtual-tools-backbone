@@ -1,4 +1,4 @@
-from .world import VTWorld, load_vt_from_dict
+from .world import VTWorld, load_vt_from_dict, reverse_world
 from .object import VTPoly, VTBall, VTSeg, VTContainer, VTCompound, \
     VTGoal, VTBlocker, VTObject
 from .noisyworld import noisify_world, trunc_norm, wrapped_norm

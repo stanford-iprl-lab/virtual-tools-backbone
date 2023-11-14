@@ -666,6 +666,7 @@ def reverse_world(w) -> VTWorld:
     for nm, o in d['objects'].items():
         if o['type'] == 'Poly' or o['type'] == 'Goal':
             o['vertices'] = [rev_pt(p) for p in o['vertices']]
+            o['vertices'].reverse()
         elif o['type'] == 'Ball':
             o['position'] = rev_pt(o['position'])
         elif o['type'] == 'Segment':
@@ -673,14 +674,17 @@ def reverse_world(w) -> VTWorld:
             o['p2'] = rev_pt(o['p2'])
         elif o['type'] == 'Container':
             o['points'] = [rev_pt(p) for p in o['points']]
+            o['points'].reverse()
         elif o['type'] == 'Compound':
             for i, poly in enumerate(o['polys']):
                 o['polys'][i] = [rev_pt(p) for p in poly]
+                o['polys'][i].reverse()
         else:
             raise Exception("Invalid object type given: " + o['type'])
     
     for nm, b in d['blocks'].items():
         b['vertices'] = [rev_pt(p) for p in b['vertices']]
+        b['vertices'].reverse()
     
     return load_vt_from_dict(d)
         
