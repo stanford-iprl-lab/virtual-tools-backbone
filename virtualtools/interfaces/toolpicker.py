@@ -1,7 +1,7 @@
 from typing import Tuple, Annotated, Dict
 from .vtinterface import VTInterface, place_object_by_polys
 from ..world import VTWorld
-import json, os
+import json, os, random
 
 __all__ = ['ToolPicker', 'load_tool_picker']
 

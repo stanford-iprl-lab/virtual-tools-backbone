@@ -633,7 +633,7 @@ def load_vt_from_dict(d):
         elif o['type'] == 'Compound':
             vtw.add_compound(nm, o['polys'], word_to_color(o['color']), density, elasticity, friction)
         else:
-            raise Exception("Invalid object type given")
+            raise Exception("Invalid object type given: " + o['type'])
 
     for nm, b in d['blocks'].items():
         vtw.add_poly_block(nm, b['vertices'], word_to_color(b['color']))
@@ -655,3 +655,32 @@ def load_vt_from_dict(d):
             raise Exception("In valid goal condition type given")
 
     return vtw
+
+# Flips a world around its x-axis
+def reverse_world(w) -> VTWorld:
+    xdim = w.dims[0]
+    def rev_pt(p):
+        return (xdim - p[0], p[1])
+    # Easier to do this as a dict than modify the objects themselves
+    d = w.to_dict()
+    for nm, o in d['objects'].items():
+        if o['type'] == 'Poly' or o['type'] == 'Goal':
+            o['vertices'] = [rev_pt(p) for p in o['vertices']]
+        elif o['type'] == 'Ball':
+            o['position'] = rev_pt(o['position'])
+        elif o['type'] == 'Segment':
+            o['p1'] = rev_pt(o['p1'])
+            o['p2'] = rev_pt(o['p2'])
+        elif o['type'] == 'Container':
+            o['points'] = [rev_pt(p) for p in o['points']]
+        elif o['type'] == 'Compound':
+            for i, poly in enumerate(o['polys']):
+                o['polys'][i] = [rev_pt(p) for p in poly]
+        else:
+            raise Exception("Invalid object type given: " + o['type'])
+    
+    for nm, b in d['blocks'].items():
+        b['vertices'] = [rev_pt(p) for p in b['vertices']]
+    
+    return load_vt_from_dict(d)
+        

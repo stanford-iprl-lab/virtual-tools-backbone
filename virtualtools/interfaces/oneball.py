@@ -28,6 +28,10 @@ class OneBall(VTInterface):
     def interface_type(self):
         return "OneBall"
     
+    @property
+    def ballsize(self):
+        return self._ballsize
+    
     def place(self,
               action: Dict,
               world: VTWorld=None) -> VTWorld:
