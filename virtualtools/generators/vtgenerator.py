@@ -4,7 +4,7 @@ from ..world import VTWorld
 from abc import ABC, abstractmethod
 import copy, random
 
-__all__ = ['VTGenerator']
+__all__ = ['VTGenerator', 'StaticGenerator']
 
 
 """
@@ -141,3 +141,17 @@ class VTGenerator(ABC):
     @property
     def options(self):
         return copy.deepcopy(self._opts)
+
+
+# A stub abstract class for generating worlds without randomness
+# Note that this is typically only used 
+class StaticGenerator(VTGenerator):
+    
+    def generate_random_placement(self, interface: VTInterface) -> Dict:
+        raise NotImplementedError('This function should never be called!')
+        
+    def set_options(self, **kwargs):
+        badkws = ['min_any_place', 'max_any_place', 'min_spec_place', 'max_spec_place']
+        if any([kw in kwargs.keys() for kw in badkws]):
+            raise Exception('Cannot set acceptability ranges for StaticGenerators')
+        return super().set_options(**kwargs)
