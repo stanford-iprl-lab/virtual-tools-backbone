@@ -3,6 +3,17 @@ from typing import Tuple, Annotated, Dict
 
 
 def word_to_color(colorname: str):
+    """Converts a string into (r,g,b,a) color values
+
+    Args:
+        colorname (str): The name of the color to translate. Must be in the set of ['blue', 'red', 'green', 'black', 'white', 'grey', 'gray', 'lightgrey', 'none']
+
+    Raises:
+        Exception: Raised if the color name is not in the values given above
+
+    Returns:
+        Tuple: A length-4 tuple defining an RGBA color
+    """    
     if colorname is None:
         return None
     try:

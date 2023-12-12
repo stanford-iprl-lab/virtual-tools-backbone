@@ -3,12 +3,22 @@ import pymunk as pm
 import numpy as np
 from .pmhelp import verts_to_vec2d
 from geometry import lines_intersect
+import copy
 
 
-# Returns the area of a segment defined by two endpoint vertices and a thickness (r)
 def area_for_segment(a: Tuple[float, float],
                      b: Tuple[float, float],
                      r: float) -> float:
+    """Returns the area of a segment defined by two endpoint vertices and a thickness (r) (assumes boxy ends)
+
+    Args:
+        a (Tuple[float, float]): the first endpoint of the segment
+        b (Tuple[float, float]): the second endpoint of the segment
+        r (float): the thickness of the segment
+
+    Returns:
+        float: the area of the defined segments
+    """    
     va = verts_to_vec2d(a)
     vb = verts_to_vec2d(b)
     return r * (np.pi*r + 2*va.get_distance(vb))
@@ -19,11 +29,19 @@ def _isleft(spt, ept, testpt):
     cross = seg1[0]*seg2[1]-seg1[1]*seg2[0]
     return cross > 0
 
-# Transforms a set of connected line segments with a width into a set of convex hulls
-def segs_to_poly(seglist: Tuple[Tuple[float, float]],
-                 r: float):
+    
+def segs_to_poly(seglist: List[Tuple[float, float]],
+                 r: float) -> List[List[Tuple[float, float]]]:
+    """Transforms a set of connected line segments with a width into a set of convex hulls
+
+    Args:
+        seglist (List[Tuple[float, float]]): a list of [x,y] vertices defining the line segments in order (eg the first segment is defined as seglist[0] to seglist[1], the second from seglist[1] to seglist[2], etc)
+        r (float): the width of the bars that these segments will be transformed into
+
+    Returns:
+        List[List[Tuple[float, float]]]: a list of convex hulls -- each defined as a list of [x,y] vertices with CCW winding
+    """
     vlist = [verts_to_vec2d(v) for v in seglist]
-    #vlist = list(map(lambda p: pm.Vec2d(p), seglist))
     # Start by figuring out the initial edge (ensure ccw winding)
     iseg = vlist[1] - vlist[0]
     ipt = vlist[0]
@@ -99,12 +117,18 @@ def segs_to_poly(seglist: Tuple[Tuple[float, float]],
     polylist.append((prev1, prev2, next3, next4))
     return polylist
 
-
-"""
-Takes in a list of (x,y) vertices, checks if drawing segments between the vertices in
-order will have any intersections
-"""
 def any_line_intersections(vertices: List[Tuple[float, float]]) -> bool:
+    """Takes in a list of (x,y) vertices, checks if drawing segments between the vertices in order will have any intersections
+
+    Args:
+        vertices (List[Tuple[float, float]]): a list of (x,y) vertices defining a series of connected segments
+        
+    Raises:
+        AssertionError: Raised if there are one or fewer vertices
+
+    Returns:
+        bool: returns true if any of those segments will overlap with one another
+    """    
     assert len(vertices) > 1, "Cannot find intersections with a single point"
     if len(vertices) <= 3:
         return False # There can be no intersections with two connected line segments

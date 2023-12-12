@@ -8,8 +8,15 @@ def _euclidDist(p1: Tuple[float, float],
                p2: Tuple[float, float]):
     return np.linalg.norm(np.array(p1) - np.array(p2))
 
-# Returns the bounding box
-def object_bounding_box(object: VTObject):
+def object_bounding_box(object: VTObject) -> Tuple[Tuple[float, float]]:
+    """Returns the bounding box of an object
+
+    Args:
+        object (VTObject): a Virtual Tools world VTObject to calculate the bounding box of
+
+    Returns:
+        Tuple[Tuple[float, float]]: A set of ((right, bottom), (left, top)) coordinates of the bounding box. Returns None if the object is not a Ball, Poly, Container, or Compound type
+    """    
     bb = [0,0]
     if object.type == 'Ball':
         bb[0] = [object.position[0] - object.radius, object.position[1] - object.radius]
@@ -30,7 +37,23 @@ def object_bounding_box(object: VTObject):
 
 
 def distance_to_object(object: VTObject,
-                       point: Tuple[float, float]):
+                       point: Tuple[float, float]) -> float:
+    """Returns the minimum distance between a point and the center of an object. Except for containers... then the minimum distance between the point and the container opening
+    
+    However this appears to be broken and depends on a function that no longer exists. I really hope this isn't needed anywhere... but if it is, please fix the `line_to_point_dist` function call!
+
+    Args:
+        object (VTObject): a Virtual Tools VTObject
+        point (Tuple[float, float]): the point to calculate the distance to
+
+    Raises:
+        NotImplementedError: always
+
+    Returns:
+        float: the distance between the object and point in world units
+    """    
+    raise NotImplementedError('distance_to_object seems to be broken; please do not call')
+    
     if object.type != 'Container':
         return _euclidDist(object.position, point)
     else:
