@@ -13,6 +13,17 @@ __all__ = ['noisify_world', 'trunc_norm', 'wrapped_norm']
 
 def trunc_norm(mu: float, sig: float,
                lower: float=None, upper: float=None) -> float:
+    """Provides a random draw from a truncated normal
+
+    Args:
+        mu (float): the mean of the (untruncated) distribution
+        sig (float): the standard deviation of the (untruncated) distribution
+        lower (float, optional): the truncation lower bound. Defaults to None, which coerces this to -20
+        upper (float, optional): the truncation upper bound. Defaults to None, which coerces this to 20
+
+    Returns:
+        float: a random number drawn from this distribution
+    """    
     if lower is None:
         a = -20
     else:
@@ -25,6 +36,15 @@ def trunc_norm(mu: float, sig: float,
 
 
 def wrapped_norm(mu: float, sig: float) -> float:
+    """Provides a random draw from a wrapped normal (around 2pi radians)
+
+    Args:
+        mu (float): the mean of the (unwrapped) distribution
+        sig (float): the standard deviation of the (unwrapped) distribution
+
+    Returns:
+        float: a random number drawn from this distribution; will be in the range of [0, 2*pi)
+    """    
     return (mu + sig * norm.rvs(size=1))[0] % (2 * np.pi)
 
 # Helper function to keep track of objects that are touching before the noisification
@@ -137,9 +157,35 @@ def noisify_world(gameworld: VTWorld,
                   noise_gravity: float=0.,
                   noise_object_friction: float=0.,
                   noise_object_density: float=0.,
-                  noise_object_elasticity: float=0.):
+                  noise_object_elasticity: float=0.) -> VTWorld:
+    """Creates a noisy version of a VTWorld, including: perceptual noise, collision noise, and property noise
+    (NOTE: property noise currently is not implemented, except for gravity)
+    
+    perceptual noise:
+        Changes the location of objects by perturbing each objects' positions by a gaussian around the original location. The standard deviation of this is set separately for static and moving objects
+    
+    collision noise:
+        Noise in the dynamics of the system. This is added uncertainty whenever there is a collision. In pymunk, collisions are resolved by providing equal and opposite impulses at the point of collision; this noise perturbs both the direction and the magnitude of those impulses
+        
+    property noise:
+        Currently only provides uncertainty about the gravity of the world; in theory should also add noise to friction, density, and elasticities of each object
+    
+    Args:
+        gameworld (VTWorld): the world to make noisy
+        noise_position_static (float, optional): the sd of an isotropic gaussian describing perceptual uncertainty for static objects. Defaults to 0..
+        noise_position_moving (float, optional): the sd of an isotropic gaussian describing perceptual uncertainty for moving objects. Defaults to 0..
+        noise_collision_direction (float, optional): the sd of a wrapped gaussian describing collision impulse perturbations. Defaults to 0..
+        noise_collision_elasticity (float, optional): the sd of the elasticity of the colision, which directly impacts the magnitude. Defaults to 0..
+        noise_gravity (float, optional): the sd of a truncated gaussian centered at 1 which is multiplied by the true gravity (but cannot bring gravity below 0). Defaults to 0..
+        noise_object_friction (float, optional): NOT IMPLEMENTED. Defaults to 0..
+        noise_object_density (float, optional): NOT IMPLEMENTED. Defaults to 0..
+        noise_object_elasticity (float, optional): NOT IMPLEMENTED. Defaults to 0..
 
-    #w = gameworld.copy()
+    Returns:
+        VTWorld: a noisy version of the original world
+    """    
+
+    w = gameworld.copy()
 
     # Figure out the gravity (with adjustments)
     if noise_gravity > 0:

@@ -1,4 +1,4 @@
-from typing import Tuple, Callable, Annotated
+from typing import Tuple, Callable, Annotated, Dict, List
 import pymunk as pm
 import numpy as np
 from .constants import * # Add period here
@@ -7,6 +7,7 @@ from .object import VTPoly, VTBall, VTSeg, VTContainer, VTCompound, \
 from .conditions import *
 from ..helpers import word_to_color, distance_to_object
 from copy import deepcopy
+import warnings
 
 __all__ = ["VTWorld", "load_vt_from_dict"]
 
@@ -16,7 +17,15 @@ def _empty_collision_handler(arb: pm.Arbiter, space: pm.Space):
 def _empty_object_handler(o1: VTObject, o2: VTObject):
     return
 
-def resolve_arbiter(arb: pm.Arbiter):
+def resolve_arbiter(arb: pm.Arbiter) -> Tuple[str, str]:
+    """Returns the Virtual Tool names involved in a pymunk arbiter
+
+    Args:
+        arb (pm.Arbiter): the pymunk arbiter to query
+
+    Returns:
+        Tuple[str, str]: the two names of the objects involved
+    """    
     shs = arb.shapes
     o1, o2 = shs
     return o1.name, o2.name
@@ -47,6 +56,19 @@ class VTWorld(object):
                  def_friction: float = DEFAULT_FRICTION,
                  bk_col: Annotated[Tuple[int], 3] = (255,255,255),
                  def_col: Annotated[Tuple[int], 3] = (0,0,0)):
+        """Instantiates a virtual tools world
+
+        Args:
+            dimensions (Tuple[float, float]): the (x,y) limits of the world
+            gravity (float): the strength of gravity pointing down in units/s^2
+            closed_ends (Annotated[Tuple[bool], 4], optional): a set of flags to say whether a [left, bottom, right, top] wall should be added around the world. Defaults to [True,True,True,True].
+            basic_timestep (float, optional): the amount of time to step forward when calculatign physics. Smaller values will slow down the simulation but be more precise. Larger values might cause "tunneling" or other physics instabilities. Defaults to 0.01.
+            def_density (float, optional): the default density of all objects in the world, unless otherwise specified. Defaults to 1.
+            def_elasticity (float, optional): the default elasticity of all objects in the world, unless otherwise specified. Defaults to 0.5.
+            def_friction (float, optional): _description_. the default friction of all objects in the world, unless otherwise specified. Defaults to 0.5.
+            bk_col (Annotated[Tuple[int], 3], optional): the RGB value of the background of the tools world. Defaults to white (255,255,255).
+            def_col (Annotated[Tuple[int], 3], optional): the default RGB color of objects added to the world. Not guaranteed to catch. Defaults to black (0,0,0).
+        """        
 
         self.def_density = def_density
         self.def_elasticity = def_elasticity
@@ -119,7 +141,12 @@ class VTWorld(object):
         if closed_ends[3]:
             self.add_box("_TopWall", [-1, self.dims[1] - 1, self.dims[0] + 1, self.dims[1] + 1], self.def_col, 0);
 
-    def step(self, t):
+    def step(self, t: float):
+        """Steps the world forward by t seconds. Not that this will not affect the precision of physics simulation; that is done via the `basic_timestep` value upon initialization
+
+        Args:
+            t (float): the amount of time (in seconds) to step forward
+        """        
         nsteps = int(np.floor(t / self.bts))
         remtime = self.bts % t
         self.time += t
@@ -138,25 +165,52 @@ class VTWorld(object):
     def _yinvert(self, y):
         return self.dims[1] - y
 
-    def check_end(self):
+    def check_end(self) -> bool:
+        """Returns whether the victory condition of the world has been cleared
+
+        Returns:
+            bool: true if victory is achieved; false if not (or if no condition exists)
+        """        
         if self.goal_cond is None:
             return False
         return self.goal_cond.is_won()
 
-    def get_object(self, name):
+    def get_object(self, name: str) -> VTObject:
+        """Returns an object that exists in the world
+
+        Args:
+            name (str): the Virtual Tools name flag of the object
+
+        Returns:
+            VTObject: the object within the world
+        
+        Raises:
+            AssertionError: if the object doesn't exist
+        """        
         assert name in self.objects.keys(), "No object by that name: " + name
         return self.objects[name]
 
-    def get_gravity(self):
+    def get_gravity(self) -> float:
+        """Returns the gravity in units/s^2 downwards
+
+        Returns:
+            float: gravity
+        """        
         return -self._cpSpace.gravity.y
 
-    def set_gravity(self, val):
+    def set_gravity(self, val: float):
+        """Sets the gravity in units/s^2 downwards. Negative values make things fall "up"
+
+        Args:
+            val (float): gravity
+        """        
         self._cpSpace.gravity = (0, -val)
 
     ########################################
     # Adding things to the world
     ########################################
-    def add_poly(self, name, vertices, color, density = None, elasticity = None, friction = None):
+    def add_poly(self,
+                 name, vertices, color, density = None, elasticity = None, friction = None):
         assert name not in self.objects.keys(), "Name already taken: " + name
         if density is None:
             density = self.def_density
@@ -296,45 +350,45 @@ class VTWorld(object):
     ########################################
     # Callbacks
     ########################################
-    def get_solid_collision_pre(self):
+    def get_solid_collision_pre(self) -> Callable:
         return self._ssPre
 
-    def set_solid_collision_pre(self, fnc = _empty_object_handler):
+    def set_solid_collision_pre(self, fnc: Callable = _empty_object_handler):
         assert callable(fnc), "Must pass legal function to callback setter"
         self._ssPre = fnc
 
-    def get_solid_collision_post(self):
+    def get_solid_collision_post(self) -> Callable:
         return self._ssPost
 
-    def set_solid_collision_post(self, fnc=_empty_object_handler):
+    def set_solid_collision_post(self, fnc: Callable = _empty_object_handler):
         assert callable(fnc), "Must pass legal function to callback setter"
         self._ssPost = fnc
 
-    def get_solid_collision_begin(self):
+    def get_solid_collision_begin(self) -> Callable:
         return self._ssBegin
 
-    def set_solid_collision_begin(self, fnc = _empty_object_handler):
+    def set_solid_collision_begin(self, fnc: Callable = _empty_object_handler):
         assert callable(fnc), "Must pass legal function to callback setter"
         self._ssBegin = fnc
 
-    def get_solid_collision_end(self):
+    def get_solid_collision_end(self) -> Callable:
         return self._ssEnd
 
-    def set_solid_collision_end(self, fnc=_empty_object_handler):
+    def set_solid_collision_end(self, fnc: Callable = _empty_object_handler):
         assert callable(fnc), "Must pass legal function to callback setter"
         self._ssEnd = fnc
 
-    def get_goal_collision_begin(self):
+    def get_goal_collision_begin(self) -> Callable:
         return self._sgBegin
 
-    def set_goal_collision_begin(self, fnc=_empty_object_handler):
+    def set_goal_collision_begin(self, fnc: Callable = _empty_object_handler):
         assert callable(fnc), "Must pass legal function to callback setter"
         self._sgBegin = fnc
 
-    def get_goal_collision_end(self):
+    def get_goal_collision_end(self) -> Callable:
         return self._sgEnd
 
-    def set_goal_collision_end(self, fnc=_empty_object_handler):
+    def set_goal_collision_end(self, fnc: Callable = _empty_object_handler):
         assert callable(fnc), "Must pass legal function to callback setter"
         self._sgEnd = fnc
 
@@ -389,7 +443,7 @@ class VTWorld(object):
         return True
 
     ########################################
-    # Success conditions
+    # Victory conditions
     ########################################
     def _get_callback_on_win(self):
         return self.win_callback
@@ -398,27 +452,66 @@ class VTWorld(object):
         assert callable(fnc), "Must pass legal function to callback setter"
         self.win_callback = fnc
 
-    def attach_any_in_goal(self, goalname, duration, exclusions = []):
+    def attach_any_in_goal(self, goalname: str, duration: float, exclusions: List[str] = []):
+        """Sets a victory condition in which any object can make it into the goal area (except those specified in exclusions)
+
+        Args:
+            goalname (str): the Virtual Tools name of the goal object
+            duration (float): the amount of time (in seconds) an object must remain in the goal
+            exclusions (List[str], optional): a list of Virtual Tools names of objects that will *not* trigger victory. Defaults to [].
+        """        
         self.goal_cond = VTCond_AnyInGoal(goalname, duration, self, exclusions)
         self.goal_cond.attach_hooks()
 
-    def attach_specific_in_goal(self, goalname, objname, duration):
+    def attach_specific_in_goal(self, goalname: str, objname: str, duration: float):
+        """Sets a victory condition in which a specific object must make it into a specific goal area
+
+        Args:
+            goalname (str): the Virtual Tools name of the goal object
+            objname (str): the Virtual Tools name of the target object to go into the goal
+            duration (float): the amount of time (in seconds) an object must remain in the goal
+        """        
         self.goal_cond = VTCond_SpecificInGoal(goalname, objname, duration, self)
         self.goal_cond.attach_hooks()
 
-    def attach_many_in_goal(self, goalname, objlist, duration):
+    def attach_many_in_goal(self, goalname: str, objlist: List[str], duration: float):
+        """Sets a victory condition in which any of a set of objects must make it into a specific goal area
+
+        Args:
+            goalname (str): the Virtual Tools name of the goal object
+            objlist (List[str]): a list of Virtual Tools names of objects to go into the goal
+            duration (float): the amount of time (in seconds) an object must remain in the goal
+        """        
         self.goal_cond = VTCond_ManyInGoal(goalname, objlist, duration, self)
         self.goal_cond.attach_hooks()
 
-    def attach_any_touch(self, objname, duration):
+    def attach_any_touch(self, objname: str, duration: float):
+        """Sets a victory condition in which any dynamic object must touch a specific object
+
+        Args:
+            objname (str): the Virtual Tools name of the target object to be touched
+            duration (float): the amount of time (in seconds) the objects must remain in contact
+        """        
         self.goal_cond = VTCond_AnyTouch(objname, duration, self)
         self.goal_cond.attach_hooks()
 
-    def attach_specific_touch(self, obj1, obj2, duration):
+    def attach_specific_touch(self, obj1: str, obj2: str, duration: float):
+        """Sets a victory condition in which two objects must come into contact
+
+        Args:
+            obj1 (str): the Virtual Tools name of one of the target objects
+            obj2 (str): the Virtual Tools name of the other target object
+            duration (float): the amount of time (in seconds) the objects must remain in contact
+        """        
         self.goal_cond = VTCond_SpecificTouch(obj1, obj2, duration, self)
         self.goal_cond.attach_hooks()
 
-    def check_finishers(self):
+    def check_finishers(self) -> bool:
+        """Makes sure there is a way to exit the world -- a victory condition and a win_callback that happens afterwards
+
+        Returns:
+            bool: true if goal_cond and win_callback exist, false otherwise
+        """        
         return self.goal_cond is not None and self.win_callback is not None
 
     ########################################
@@ -426,6 +519,8 @@ class VTWorld(object):
     ########################################
 
     def reset_collisions(self):
+        """Clears out the collision events list
+        """        
         self._collision_events = []
 
     def _get_collision_events(self):
@@ -434,7 +529,16 @@ class VTWorld(object):
     ########################################
     # Misc
     ########################################
-    def check_collision(self, pos, verts):
+    def check_collision(self, pos: Tuple[float, float], verts: List[Tuple[float, float]]) -> bool:
+        """Checks whether placing a convex polygon in the world would cause a collision
+
+        Args:
+            pos (Tuple[float, float]): the position of the hypothetical polygon (where all vertices are calculated wrt)
+            verts (List[Tuple[float, float]]): a list of (x,y) vertices of the convex polygon, relative to the position
+
+        Returns:
+            bool: true if there would be a collision, false if not
+        """        
         nvert = [(v[0]+pos[0], v[1]+pos[1]) for v in verts]
         tmpBody = pm.Body(1,1)
         placeShape = pm.Poly(tmpBody, nvert)
@@ -445,6 +549,7 @@ class VTWorld(object):
         self.has_place_collision = False
         squery = self._cpSpace.shape_query(placeShape)
         """ Code doesn't account for blockers (sensors)
+        # Update 12/12/23: I don't see why this wouldn't but if you're getting incorrect output, check the blockers!
         if len(squery) == 0:
             return False
         else:
@@ -456,7 +561,16 @@ class VTWorld(object):
         """
         return len(squery) > 0
 
-    def check_circle_collision(self, pos, rad):
+    def check_circle_collision(self, pos: Tuple[float, float], rad: float) -> bool:
+        """Checks if there would be a colision with an object if a circular object were placed in the world
+
+        Args:
+            pos (Tuple[float, float]): the center of the hypothetical circular object
+            rad (float): the radius of the hypothetical circular object
+
+        Returns:
+            bool: true if there would be a colision, false if not
+        """        
         tmpBody = pm.Body(1,1)
         placeShape = pm.Circle(tmpBody, rad, pos)
         placeShape.collision_type = COLTYPE_CHECKER
@@ -467,12 +581,33 @@ class VTWorld(object):
         squery = self._cpSpace.shape_query(placeShape)
         return len(squery) > 0
 
-    def kick(self, objectname, impulse, position):
+    def kick(self, objectname: str, impulse: Tuple[float, float], position: Tuple[float, float]):
+        """Applies an impulse to an object at a particular point
+
+        Args:
+            objectname (str): the Virtual Tools name of the object in this world
+            impulse (Tuple[float, float]): the impulse (momentum) vector
+            position (Tuple[float, float]): the point to apply the impulse to in world coordinates. Note: this must be inside the object!
+        """        
         o = self.get_object(objectname)
         o.kick(impulse, position)
 
-    def distance_to_goal(self, point):
+    def distance_to_goal(self, point: Tuple[float, float]) -> float:
+        """Returns the distance between the nearest object achieving victory and the goal area / other object
+        
+        WARNING: this seems like an old function and doesn't account for a number of VTCond types, plus the math looks off... so be careful!
+
+        Args:
+            point (Tuple[float, float]): _description_
+
+        Returns:
+            float: _description_
+        
+        Raises:
+            AssertionError: if no goal condition is specified
+        """        
         assert self.goal_cond, "Goal condition must be specified to get distance"
+        warnings.warn("This function is old and looks wrong - be careful using it")
         # Special case... requires getting two distances
         if type(self.goal_cond) == VTCond_SpecificTouch:
             o1 = self.get_object(self.goal_cond.o1)
@@ -483,9 +618,20 @@ class VTWorld(object):
             gobj = self.get_object(self.goal_cond.goal)
             return max(gobj.distance_from_point(point), 0)
 
-    def distance_to_goal_container(self, point):
-        """Specifies that for container objects, you want the distance to the top of the container"""
+    def distance_to_goal_container(self, point: Tuple[float, float]):
+        """Returns the distance between the nearest object achieving victory and the goal area / other object; specifies that for container objects, you want the distance to the top of the container
+        
+        WARNING: this seems like an old function and doesn't account for a number of VTCond types, plus the math looks off... so be careful!
+
+
+        Args:
+            point (Tuple[float, float]): _description_
+
+        Returns:
+            _type_: _description_
+        """
         assert self.goal_cond, "Goal condition must be specified to get distance"
+        warnings.warn("This function is old and looks wrong - be careful using it")
         try:
             # Special case... requires getting two distances
             if type(self.goal_cond) == VTCond_SpecificTouch:
@@ -505,10 +651,23 @@ class VTWorld(object):
         except:
             pdb.set_trace()
 
-    def get_dynamic_objects(self):
+    def get_dynamic_objects(self) -> List[VTObject]:
+        """Returns a list of all dynamic (not static) objects in the world
+
+        Returns:
+            List[VTObject]: a List of all of the dynamics VTObjects
+        """        
         return [self.objects[i] for i in self.objects.keys() if not self.objects[i].is_static()]
 
-    def to_dict(self):
+    def to_dict(self) -> Dict:
+        """Outputs a JSON-serializable Dict describing the world
+
+        Raises:
+            Exception: if invalid object or goal types exist in the world. In theory this should never happen
+
+        Returns:
+            Dict: a JSON-serializable Dict
+        """        
         wdict = dict()
         wdict['dims'] = tuple(self.dims)
         wdict['bts'] = self.bts
@@ -595,7 +754,18 @@ class VTWorld(object):
 # Loading
 ########################################
 
-def load_vt_from_dict(d):
+def load_vt_from_dict(d: Dict) -> VTWorld:
+    """Takes a serializable Dict describing the world, and turns it into a VTWorld object
+
+    Args:
+        d (Dict): a serializable vesion of the world (e.g., from VTWorld.to_dict())
+
+    Raises:
+        Exception: if invalid object or goal types are described in the Dict
+
+    Returns:
+        VTWorld: the world described in the Dict
+    """    
     d = deepcopy(d)
     def_elast = float(d['defaults']['elasticity'])
     def_fric = float(d['defaults']['friction'])
@@ -656,8 +826,18 @@ def load_vt_from_dict(d):
 
     return vtw
 
-# Flips a world around its x-axis
-def reverse_world(w) -> VTWorld:
+def reverse_world(w: VTWorld) -> VTWorld:
+    """Flips a world around its x-axis
+
+    Args:
+        w (VTWorld): the world to flip
+
+    Raises:
+        Exception: if an object has an illegal type. In theory this should never happen
+
+    Returns:
+        VTWorld: the flipped world
+    """    
     xdim = w.dims[0]
     def rev_pt(p):
         return (xdim - p[0], p[1])

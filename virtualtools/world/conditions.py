@@ -1,3 +1,4 @@
+from typing import Tuple, List, Dict
 import numpy as np
 from .abstracts import VTCond_Base
 from .constants import *
@@ -10,7 +11,15 @@ __all__ = ["VTCond_AnyInGoal", "VTCond_SpecificInGoal", "VTCond_AnyTouch",
 
 class VTCond_AnyInGoal(VTCond_Base):
 
-    def __init__(self, goalname, duration, parent, exclusions = []):
+    def __init__(self, goalname: str, duration: float, parent, exclusions: List[str] = []):
+        """A victory condition if *any* moving object makes it into the goal (except those defined by the exception list)
+
+        Args:
+            goalname (str): the "name" flag of the goal
+            duration (float): the amount of time an object must be in the goal to win (in seconds)
+            parent (VTWorld): the VTWorld object this is describing the victory condition for
+            exclusions (List[str], optional): _description_. Defaults to [].
+        """        
         self.type = "AnyInGoal"
         self.won = False
         self.goal = goalname
@@ -33,6 +42,8 @@ class VTCond_AnyInGoal(VTCond_Base):
             del self.ins[obj.name]
 
     def attach_hooks(self):
+        """Sets collision handlers for victory condition logic
+        """        
         self.parent.set_goal_collision_begin(self._goes_in)
         self.parent.set_goal_collision_end(self._goes_out)
 

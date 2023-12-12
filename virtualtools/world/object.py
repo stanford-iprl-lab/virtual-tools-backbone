@@ -1,3 +1,4 @@
+from typing import Tuple, List, Dict
 import pymunk as pm
 import numpy as np
 from geometry import convex_area, convex_centroid, recenter_polygon, check_counterclockwise
@@ -12,8 +13,20 @@ __all__ = ['VTPoly','VTBall','VTSeg','VTContainer',
 
 class VTPoly(VTObject):
 
-    def __init__(self,name,space,vertices,density = DEFAULT_DENSITY,elasticity=DEFAULT_ELASTICITY,
-                 friction=DEFAULT_FRICTION,color=DEFAULT_COLOR):
+    def __init__(self,name: str, space: pm.Space, vertices: List[Tuple[float,float]],
+                 density: float = DEFAULT_DENSITY, elasticity: float=DEFAULT_ELASTICITY,
+                 friction: float=DEFAULT_FRICTION, color: str | Tuple[int,int,int,int]=DEFAULT_COLOR):
+        """Instantiates a convex polygon object
+
+        Args:
+            name (str): the Virtual Tools name tag
+            space (pm.Space): the pymunk Space the object will be added to
+            vertices (List[Tuple[float,float]]): a list of (x,y) vertices making up the polygon
+            density (float, optional): the density of the object. Set to 0 to make the object static. Defaults to DEFAULT_DENSITY.
+            elasticity (float, optional): the elasticity of the object. Defaults to DEFAULT_ELASTICITY.
+            friction (float, optional): the friction of the object. Defaults to DEFAULT_FRICTION.
+            color (str | Tuple[int,int,int,int], optional): either a string or (r,g,b,a) tuple describing the object color. Defaults to DEFAULT_COLOR.
+        """        
         VTObject.__init__(self, name, "Poly", space, color, density, friction, elasticity)
 
         vertices = [[float(vp) for vp in v] for v in vertices]
@@ -40,7 +53,12 @@ class VTPoly(VTObject):
             self._cpBody.position = loc
             space.add(self._cpBody, self._cpShape)
 
-    def get_vertices(self):
+    def get_vertices(self) -> List[Tuple[float, float]]:
+        """Returns the vertices of the polygon
+
+        Returns:
+            List[Tuple[float, float]]: a list of (x,y) vertices
+        """        
         if self.is_static():
             verts = [np.array(v) for v in self._cpShape.get_vertices()]
             verts.reverse()
@@ -51,31 +69,54 @@ class VTPoly(VTObject):
             for v in self._cpShape.get_vertices():
                 vcp = v.rotated(rot) + pos
                 verts = [np.array(vcp)] + verts
-                #verts.append(np.array(vcp))
         return verts
 
-    def get_area(self):
+    def get_area(self) -> float:
+        """Returns the area of the polygon
+
+        Returns:
+            float: the area
+        """        
         return self.area
 
     # Overwrites for static polygons too
-    def get_pos(self):
+    def get_pos(self) -> Tuple[float, float]:
+        """Gets the centroid of the polygon
+
+        Returns:
+            Tuple[float, float]: the (x,y) centroid as an np.array
+        """        
         if self.is_static():
             vertices = [[float(vp) for vp in v] for v in self.vertices]
             return convex_centroid(vertices)
         else:
             return np.array(self._cpBody.position)
 
-    def distance_from_point(self, point):
-        d, _ = self._cpShape.point_query(point)
-        return d
+    """Pretty sure this method is inherited so I can ignore..."""
+    # def distance_from_point(self, point: Tuple[float, float]) -> float:
+    #     d, _ = self._cpShape.point_query(point)
+    #     return d
 
     vertices = property(get_vertices)
 
 
 class VTBall(VTObject):
 
-    def __init__(self, name, space, position, radius, density = DEFAULT_DENSITY,
-                 elasticity=DEFAULT_ELASTICITY, friction=DEFAULT_FRICTION,color=DEFAULT_COLOR):
+    def __init__(self, name: str, space: pm.Space, position: Tuple[float, float], radius: float,
+                 density: float = DEFAULT_DENSITY, elasticity: float=DEFAULT_ELASTICITY,
+                 friction: float=DEFAULT_FRICTION, color: str | Tuple[int,int,int,int]=DEFAULT_COLOR):
+        """Instantiates a circular object
+
+        Args:
+            name (str): the Virtual Tools name tag
+            space (pm.Space): the pymunk Space the object will be added to
+            position (Tuple[float, float]): the center of the ball
+            radius (float): the radius of the ball in world units
+            density (float, optional): the density of the object. Set to 0 to make the object static. Defaults to DEFAULT_DENSITY.
+            elasticity (float, optional): the elasticity of the object. Defaults to DEFAULT_ELASTICITY.
+            friction (float, optional): the friction of the object. Defaults to DEFAULT_FRICTION.
+            color (str | Tuple[int,int,int,int], optional): either a string or (r,g,b,a) tuple describing the object color. Defaults to DEFAULT_COLOR.
+        """       
         VTObject.__init__(self, name, "Ball", space, color, density, friction, elasticity)
         area = np.pi * radius * radius
         mass = density * area
@@ -97,15 +138,15 @@ class VTBall(VTObject):
             self._cpBody.position = position
             space.add(self._cpBody, self._cpShape)
 
-    def get_radius(self):
+    def get_radius(self) -> float:
         return self._cpShape.radius
 
-    def get_area(self):
+    def get_area(self) -> float:
         r = self.get_radius()
         return np.pi * r * r
 
     # Overwrites for static circles too
-    def get_pos(self):
+    def get_pos(self) -> Tuple[float, float]:
         if self.is_static():
             return self._cpShape.offset
         else:
