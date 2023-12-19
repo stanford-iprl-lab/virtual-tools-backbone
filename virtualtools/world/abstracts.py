@@ -50,7 +50,7 @@ class VTObject(ABC):
             numpy.array: An array containing the [x,y] position of the object
             
         Raises:
-            AssertionError -- if called on a static object
+            AssertionError: if called on a static object
         """        
         assert not self.is_static(), "Static bodies do not have a position"
         p = self._cpBody.position
@@ -215,9 +215,9 @@ class VTObject(ABC):
         """Returns serializable descriptions of object geometry
 
         Returns:
-            for type "poly": List[Tuple[float, float]] - a list of the vertices (x,y) of the polygon
-            for type "ball": Tuple[Tuple[float, float], float] - the (x,y) position and the radius
-            for type "container" or "compound": List[List[Tuple[float, float]]] - a list of convex polygons, described as a list of (x,y) vertices
+            if self.type == "poly": List[Tuple[float, float]] - a list of the vertices (x,y) of the polygon
+            if self.type == "ball": Tuple[Tuple[float, float], float] - the (x,y) position and the radius
+            if self.type == "container" or "compound": List[List[Tuple[float, float]]] - a list of convex polygons, described as a list of (x,y) vertices
             otherwise: None
         """        
         if (self.type == "Poly"):
