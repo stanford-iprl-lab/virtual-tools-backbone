@@ -39,9 +39,7 @@ class ToolPicker(VTInterface):
         return world
     
     def to_dict(self):
-        d = super().to_dict()
-        d.update({'tools': self._tools})
-        return d
+        return self._tpdict
 
     @property
     def toolnames(self):
