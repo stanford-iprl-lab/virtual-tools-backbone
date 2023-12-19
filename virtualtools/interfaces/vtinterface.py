@@ -164,12 +164,20 @@ class VTInterface(ABC):
     def place(self, action: Dict, world: VTWorld) -> VTWorld:
         raise NotImplementedError("place method must be overwritten")
 
+    @abstractmethod
+    def to_dict(self):
+        return {'world': self.worlddict}
+
     def noisy_placement(self,
                         action: Dict,
                         noise: Dict,
                         world: VTWorld) -> VTWorld:
         nworld = noisify_world(world, **noise)
         return self.place(action, nworld)
+    
+    @property
+    def dict(self):
+        return self.to_dict()
 
     def _setup_world(self,
                       action: Dict,

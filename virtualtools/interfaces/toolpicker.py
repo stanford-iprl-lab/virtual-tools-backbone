@@ -37,6 +37,11 @@ class ToolPicker(VTInterface):
         tool_polys = self._tools[tool]
         world = place_object_by_polys(world, tool_polys, pos)
         return world
+    
+    def to_dict(self):
+        d = super().to_dict()
+        d.update({'tools': self._tools})
+        return d
 
     @property
     def toolnames(self):

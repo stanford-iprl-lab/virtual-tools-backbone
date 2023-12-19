@@ -39,6 +39,11 @@ class OneBall(VTInterface):
         world = place_ball(world, self._ballsize, action['position'])
         return world
     
+    def to_dict(self):
+        d = super().to_dict()
+        d.update({'ballsize': self._ballsize})
+        return d
+    
 def load_one_ball(ob_json_file, basic_timestep=0.1):
     with open(ob_json_file, 'r') as jfl:
         return OneBall(json.load(jfl), basic_timestep)
