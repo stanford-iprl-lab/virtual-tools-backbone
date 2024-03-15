@@ -90,8 +90,8 @@ class VTGenerator(ABC):
         """        
         minap = self._opts['min_any_place']
         maxap = self._opts['max_any_place']
-        if minap > 0.0 and maxap < 1.0:
-            anyprop = self._check_placement(interface, 'specific')
+        if minap > 0.0 or maxap < 1.0:
+            anyprop = self._check_placement(interface, 'any')
             if verbose:
                 print('Proportion of any random successes:', anyprop)
             if anyprop < minap:
@@ -105,7 +105,7 @@ class VTGenerator(ABC):
         
         minsp = self._opts['min_spec_place']
         maxsp = self._opts['max_spec_place']
-        if minsp > 0.0 and maxsp < 1.0:
+        if minsp > 0.0 or maxsp < 1.0:
             specprop = self._check_placement(interface, 'specific')
             if verbose:
                 print('Proportion of specific random successes:', specprop)
@@ -120,7 +120,7 @@ class VTGenerator(ABC):
             
         minlp = self._opts['min_lure_place']
         maxlp = self._opts['max_lure_place']
-        if minlp > 0.0 and maxlp < 1.0:
+        if minlp > 0.0 or maxlp < 1.0:
             lureprop = self._check_placement(interface, 'lure')
             if verbose:
                 print('Proportion of lure random successes:', lureprop)
