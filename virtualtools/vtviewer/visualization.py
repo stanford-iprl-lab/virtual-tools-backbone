@@ -84,11 +84,16 @@ def _draw_obj(o, s, makept, lighten_amt=0):
     else:
         print ("Error: invalid object type for drawing:", o.type)
 
-def _draw_tool(toolverts, makept, size=[90, 90], color=(0,0,0,255)):
+def draw_tool(toolverts, size=[90, 90], color=(0,0,0,255)):
     s = pg.Surface(size)
     s.fill(WHITE)
+    def _shift_pt(p):
+        rc_p_x = p[0] + size[0] / 2
+        rc_p_y = size[1] / 2 - p[1]
+        return [int(rc_p_x), int(rc_p_y)]
+    
     for poly in toolverts:
-        vtxs = [makept(p) for p in poly]
+        vtxs = [_shift_pt(p) for p in poly]
         pg.draw.polygon(s, color, vtxs)
     return s
 
