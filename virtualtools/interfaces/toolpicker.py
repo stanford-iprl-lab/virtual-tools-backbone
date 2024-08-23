@@ -1,7 +1,7 @@
 from typing import Tuple, Annotated, Dict
 from .vtinterface import VTInterface, place_object_by_polys
 from ..world import VTWorld
-import json, os, random
+import json, os, random, copy
 
 __all__ = ['ToolPicker', 'load_tool_picker']
 
@@ -44,6 +44,10 @@ class ToolPicker(VTInterface):
     @property
     def toolnames(self):
         return list(self._tools.keys())
+    
+    @property
+    def tools(self):
+        return copy.deepcopy(self._tools)
 
 def load_tool_picker(tp_json_file, basic_timestep = 0.1):
     with open(tp_json_file, 'r') as jfl:
