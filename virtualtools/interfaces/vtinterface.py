@@ -4,7 +4,7 @@ from copy import deepcopy
 import warnings
 from ..world import VTWorld, noisify_world, load_vt_from_dict, VTObject
 from .running import (run_game, get_path, get_state_path, get_collisions, 
-        get_geom_path, get_game_outcomes, CollisionError)
+        get_geom_path, get_game_outcomes, CollisionError, _no_filter)
 from geometry import ear_clip, lines_intersect, check_counterclockwise, gift_wrap
 from ..helpers import any_line_intersections
 
@@ -326,8 +326,23 @@ class VTInterface(ABC):
             return [None, None, None, -1] # Error code for illegal action
         return get_game_outcomes(w, maxtime, self.bts)
 
-    def observe_collision_events():
-        raise NotImplementedError("TO IMPLEMENT")
+    def observe_collision_events(self,
+                                 action: Dict,
+                                 noise: Dict=None,
+                                 filter_func: Callable[[List], List] = _no_filter,
+                                 maxtime: float=None,
+                                 stop_on_goal: bool=True,
+                                 new_object_properties: Dict=None
+                                 ) -> Tuple[Dict, List, bool, float]:
+        maxtime = maxtime or self._maxtime
+        try:
+            w = self._setup_world(action,
+                                  noise,
+                                  stop_on_goal,
+                                  new_object_properties)
+        except CollisionError:
+            return [None, None, None, -1]  # Error code for illegal action
+        return get_collisions(w, filter_func, maxtime, self.bts)
     
 
     @property

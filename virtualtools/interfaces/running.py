@@ -1,6 +1,6 @@
 from ..world import VTWorld
 import numpy as np
-from typing import Tuple, Dict, List
+from typing import Tuple, Dict, List, Callable
 
 """
 Various functions for running the gameworld forward
@@ -131,6 +131,9 @@ def get_geom_path(gameworld: VTWorld,
     return pathdict, gameworld.check_end(), t
 
 
+def _no_filter(collisions: List):
+    return collisions
+
 """
 Run the game and keep track of object positions
 
@@ -141,6 +144,7 @@ Returns tuple of:
     float: the time at which the world was stopped (due to solution or timeout)
 """
 def get_collisions(gameworld: VTWorld,
+             filter_func: Callable[[List], List] = _no_filter,
              maxtime: float=20.,
              step_size: float=0.1,
              collision_slop: float=0.2001
@@ -158,10 +162,9 @@ def get_collisions(gameworld: VTWorld,
         t += step_size
         for onm in tracknames:
             pathdict[onm].append(gameworld.objects[onm].position)
-        if gameworld.checkEnd() or (t >= maxtime):
+        if gameworld.check_end() or (t >= maxtime):
             running = False
-    collisions = filter_collision_events(gameworld.collision_events,
-                                         collision_slop)
+    collisions = filter_func(gameworld.collision_events)
     return pathdict, collisions, gameworld.check_end(), t
 
 """
