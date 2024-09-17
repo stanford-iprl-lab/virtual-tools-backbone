@@ -231,11 +231,7 @@ class VTInterface(ABC):
             w.solid_collision_end = self.solid_collision_end
         if self.solid_collision_post:
             w.solid_collision_post = self.solid_collision_post
-        if self.goal_collision_begin:
-            w.goal_collision_begin = self.goal_collision_begin
-        if self.goal_collision_end:
-            w.goal_collision_end = self.goal_collision_end
-        
+
         if noise is not None:
             return self.noisy_placement(action, noise, w)
         else:
@@ -412,20 +408,6 @@ class VTInterface(ABC):
     def set_solid_collision_end(self, fnc: Callable = _empty_object_handler):
         assert callable(fnc), "Must pass legal function to callback setter"
         self._ssEnd = fnc
-
-    def get_goal_collision_begin(self) -> Callable:
-        return self._sgBegin
-
-    def set_goal_collision_begin(self, fnc: Callable = _empty_object_handler):
-        assert callable(fnc), "Must pass legal function to callback setter"
-        self._sgBegin = fnc
-
-    def get_goal_collision_end(self) -> Callable:
-        return self._sgEnd
-
-    def set_goal_collision_end(self, fnc: Callable = _empty_object_handler):
-        assert callable(fnc), "Must pass legal function to callback setter"
-        self._sgEnd = fnc
     
     solid_collision_pre = property(get_solid_collision_pre,
                                     set_solid_collision_pre)
@@ -435,10 +417,6 @@ class VTInterface(ABC):
                                     set_solid_collision_begin)
     solid_collision_end = property(get_solid_collision_end,
                                   set_solid_collision_end)
-    goal_collision_begin = property(get_goal_collision_begin,
-                                   set_goal_collision_begin)
-    goal_collision_end = property(get_goal_collision_end,
-                                 set_goal_collision_end)
 
 
 class VTActionError(Exception):
