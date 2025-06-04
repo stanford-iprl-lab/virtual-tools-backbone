@@ -271,6 +271,19 @@ class VTObject(ABC):
         """        
         _, info = self._cpShape.point_query(point)
         return point - info.point
+    
+    def get_bounding_box(self):
+        if self._cpShape is None:
+            geom = self.to_geom()
+            x_min, x_max, y_min, y_max = np.inf, -np.inf, np.inf, -np.inf
+            for shape in geom:
+                shape = np.array(shape)
+                x_min = np.min([x_min, np.min(shape[:,0])])
+                x_max = np.max([x_max, np.max(shape[:,0])])
+                y_min = np.min([y_min, np.min(shape[:,1])])
+                y_max = np.max([y_max, np.max(shape[:,1])])
+            return x_min, y_min, x_max, y_max
+        return self._cpShape.cache_bb()
 
     # Add pythonic decorators
     position = property(get_pos, set_pos)
@@ -296,7 +309,7 @@ class VTCond_Base(ABC):
 
         Returns:
             float: the time remaining (or None)
-        """        
+        """  
         ti = self._get_time_in()
         if ti == -1:
             return None

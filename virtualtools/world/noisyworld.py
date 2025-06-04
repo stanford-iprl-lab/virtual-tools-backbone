@@ -333,7 +333,8 @@ def noisify_world(gameworld: VTWorld,
                 arb.contact_point_set = newcps
 
         def do_solid_solid_pre(arb, space, data):
-            noisify_arbiter(arb)
+            if w.time > 0.001 and arb.is_first_contact:
+                noisify_arbiter(arb)
             return w._solid_solid_pre(arb, space, data)
 
     else:
@@ -378,5 +379,5 @@ def noisify_world(gameworld: VTWorld,
     psench.begin = do_solid_goal_begin
     psench.separate = do_solid_goal_end
 
-    w._cpSpace.step(.0001)
+    w._cpSpace.step(.000001)
     return w

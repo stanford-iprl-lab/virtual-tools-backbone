@@ -1,6 +1,7 @@
 from ..world import VTWorld
 import numpy as np
-from typing import Tuple, Dict, List, Callable
+from typing import Tuple, Dict, List
+from ..helpers import filter_collision_events
 
 """
 Various functions for running the gameworld forward
@@ -42,23 +43,51 @@ Returns tuple of:
 """
 def get_path(gameworld: VTWorld,
              maxtime: float=20.,
-             step_size: float=0.1
+             step_size: float=0.1,
+             return_world: bool=False
              ) -> Tuple[Dict, bool, float]:
     running = True
     t = 0
     pathdict = dict()
     tracknames = []
     for onm, o in gameworld.objects.items():
-        if not o.check_end():
+        if not o.is_static():
             tracknames.append(onm)
-            pathdict[onm] = [o.position]
+            pathdict[onm] = [[o.position[0], o.position[1], o.rotation, o.velocity[0], o.velocity[1]]]
     while running:
         gameworld.step(step_size)
         t += step_size
         for onm in tracknames:
-            pathdict[onm].append(gameworld.objects[onm].position)
+            pathdict[onm].append([gameworld.objects[onm].position[0], gameworld.objects[onm].position[1], gameworld.objects[onm].rotation, gameworld.objects[onm].velocity[0], gameworld.objects[onm].velocity[1]])
         if gameworld.check_end() or (t >= maxtime):
             running = False
+    if return_world:
+        return pathdict, gameworld.check_end(), t, gameworld
+    return pathdict, gameworld.check_end(), t
+
+
+def get_path_bounding_boxes(gameworld: VTWorld,
+             maxtime: float=20.,
+             step_size: float=0.1,
+             return_world: bool=False
+             ) -> Tuple[Dict, bool, float]:
+    running = True
+    t = 0
+    pathdict = dict()
+    tracknames = []
+    for onm, o in gameworld.objects.items():
+        if not o.is_static():
+            tracknames.append(onm)
+            pathdict[onm] = [[o.position[0], o.position[1], o.rotation, o.get_bounding_box(), o.to_geom()]]
+    while running:
+        gameworld.step(step_size)
+        t += step_size
+        for onm in tracknames:
+            pathdict[onm].append([gameworld.objects[onm].position[0], gameworld.objects[onm].position[1], gameworld.objects[onm].rotation, gameworld.objects[onm].get_bounding_box(), gameworld.objects[onm].to_geom()])
+        if gameworld.check_end() or (t >= maxtime):
+            running = False
+    if return_world:
+        return pathdict, gameworld.check_end(), t, gameworld
     return pathdict, gameworld.check_end(), t
 
 """
@@ -131,9 +160,6 @@ def get_geom_path(gameworld: VTWorld,
     return pathdict, gameworld.check_end(), t
 
 
-def _no_filter(collisions: List):
-    return collisions
-
 """
 Run the game and keep track of object positions
 
@@ -144,11 +170,11 @@ Returns tuple of:
     float: the time at which the world was stopped (due to solution or timeout)
 """
 def get_collisions(gameworld: VTWorld,
-             filter_func: Callable[[List], List] = _no_filter,
              maxtime: float=20.,
              step_size: float=0.1,
-             collision_slop: float=0.2001
-             ) -> Tuple[Dict, List, bool, float]:
+             collision_slop: float=0.2001,
+             return_world: bool=False
+             ) -> Tuple[Dict, List, bool, float, VTWorld]:
     running = True
     t = 0
     pathdict = dict()
@@ -156,15 +182,18 @@ def get_collisions(gameworld: VTWorld,
     for onm, o in gameworld.objects.items():
         if not o.is_static():
             tracknames.append(onm)
-            pathdict[onm] = [o.position]
+            pathdict[onm] = [[o.position[0], o.position[1], o.rotation, o.velocity[0], o.velocity[1]]]
     while running:
         gameworld.step(step_size)
         t += step_size
         for onm in tracknames:
-            pathdict[onm].append(gameworld.objects[onm].position)
+            pathdict[onm].append([gameworld.objects[onm].position[0], gameworld.objects[onm].position[1], gameworld.objects[onm].rotation, gameworld.objects[onm].velocity[0], gameworld.objects[onm].velocity[1]])
         if gameworld.check_end() or (t >= maxtime):
             running = False
-    collisions = filter_func(gameworld.collision_events)
+    collisions = filter_collision_events(gameworld.collision_events,
+                                         collision_slop)
+    if return_world:
+        return pathdict, collisions, gameworld.check_end(), t, gameworld
     return pathdict, collisions, gameworld.check_end(), t
 
 """

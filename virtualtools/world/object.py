@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Tuple, List, Dict
 import pymunk as pm
 import numpy as np
@@ -267,7 +268,6 @@ class VTContainer(VTObject):
         if mass != 0:
             self._cpBody.position = loc
 
-
     def get_polys(self):
         if self.is_static():
             polys = self.polylist
@@ -331,7 +331,6 @@ class VTContainer(VTObject):
 
     def get_area(self):
         return self._area
-
 
     polys = property(get_polys)
     vertices = property(get_vertices)
@@ -469,7 +468,6 @@ class VTCompound(VTObject):
         #pdb.set_trace()
         #min_s = list(self._cpBody.shapes)[idx]
         return min_s
-
 
 class VTGoal(VTObject):
 

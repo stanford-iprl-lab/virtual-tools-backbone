@@ -10,7 +10,7 @@ __all__ = [
     # Geometric functions: geom
     'area_for_segment', 'segs_to_poly', 'any_line_intersections',
     # Functions on the world: physics
-    'distance_to_object', 'object_bounding_box',
+    'distance_to_object', 'object_bounding_box', 'filter_collision_events', 'strip_goal',
     # Others: misc
     'word_to_color'
 ]

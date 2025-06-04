@@ -3,6 +3,9 @@ from ..world.abstracts import VTObject, VTCond_Base
 import pymunk as pm
 import numpy as np
 import scipy.spatial as sps
+import re
+import operator
+import copy
 
 def _euclidDist(p1: Tuple[float, float],
                p2: Tuple[float, float]):
@@ -63,3 +66,86 @@ def distance_to_object(object: VTObject,
 
         distance = line_to_point_dist(wall_opening, wall_closing, point)
         return distance
+    
+def filter_collision_events(eventlist, slop_time = .2):
+    begin_list = {}
+    last_list = {}
+    col_list = {}
+    col_list_beg = {}
+    output_events = []
+
+    for o1,o2,tp,tm,ci in eventlist:
+        if o2 < o1:
+            tmp = o2
+            o2 = o1
+            o1 = tmp
+            # Also need to swap the normals
+            ci[0] = -ci[0]
+        comb = re.sub('__', '_', o1+"_"+o2).strip('_') # Filtering for objects that start with _
+        if tp == 'begin':
+            # We have already seen them disconnect
+            if comb in last_list.keys():
+                # Long break since last time they were connected
+                if tm - last_list[comb] > slop_time:
+                    try:
+                        output_events.append([o1,o2,begin_list[comb],last_list[comb], col_list[comb]])
+                    except:
+                        output_events.append([o1, o2, 0.1, last_list[comb], col_list[comb]])
+
+                    del last_list[comb]
+                    del col_list[comb]
+                    begin_list[comb] = tm
+                    col_list_beg[comb] = ci
+                # Short break since connection
+                else:
+                    del last_list[comb]
+                    del col_list[comb]
+            # We have not yet seen them disconnect -- so they have never been together
+            else:
+                begin_list[comb] = tm
+                col_list_beg[comb] = ci
+        elif tp == 'end':
+            last_list[comb] = tm
+            col_list[comb] = col_list_beg[comb]
+
+    # Clear out disconnects that never reconnect
+    for comb, tm in last_list.items():
+        o1, o2 = comb.split('_')
+        try:
+            output_events.append([o1,o2,begin_list[comb], last_list[comb], col_list[comb]])
+            del begin_list[comb]
+            del col_list_beg[comb]
+        except:
+            # Sometimes beginning touch doesn't show up on Kelsey's computer...
+            output_events.append([o1,o2,0.1, last_list[comb], col_list[comb]])
+
+
+    # Add in the items still in contact
+    for comb, tm in begin_list.items():
+        o1, o2 = comb.split('_')
+        output_events.append([o1,o2,tm,None,col_list_beg[comb]])
+
+    return sorted(output_events, key=operator.itemgetter(2))
+
+def strip_goal(worlddict):
+    wd = copy.deepcopy(worlddict)
+    wd['objects']['FAKE_GOAL_7621895'] = {
+        "type": "Goal",
+        "color": "green",
+        "density": 0,
+        "vertices": [[-10, -10], [-10, -5], [-5, -5], [-5, -10]]
+    }
+    wd['objects']['FAKE_BALL_213232'] = {
+        "type": "Ball",
+        "color": "red",
+        "density": 1,
+        "position": [-100, -10],
+        "radius": 2
+    }
+    wd['gcond'] = {
+        "type": "SpecificInGoal",
+        "goal": 'FAKE_GOAL_7621895',
+        "obj": 'FAKE_BALL_213232',
+        "duration": 2000
+    }
+    return wd

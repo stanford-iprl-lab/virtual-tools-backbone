@@ -135,7 +135,7 @@ class VTCond_AnyTouch(VTCond_Base):
 
     def _end_touch(self, obj, goal):
         if obj.name == self.goal or goal.name == self.goal:
-            sefl.tin = -1
+            self.tin = -1
 
     def attach_hooks(self):
         self.parent.set_solid_collision_begin(self._begin_touch)

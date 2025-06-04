@@ -1,10 +1,10 @@
 import pymunk as pm
 import pygame as pg
+from pygame.locals import QUIT
 import numpy as np
 from ..world import VTWorld, load_vt_from_dict
 from ..world.constants import DEFAULT_COLOR, DEFAULT_GOAL_COLOR
 from ..world.object import VTObject, VTPoly, VTBall, VTSeg, VTContainer, VTCompound, VTGoal, VTBlocker
-
 
 WHITE = (255, 255, 255, 255)
 
@@ -84,19 +84,24 @@ def _draw_obj(o, s, makept, lighten_amt=0):
     else:
         print ("Error: invalid object type for drawing:", o.type)
 
-def draw_tool(toolverts, size=[90, 90], color=(0,0,0,255)):
+def draw_tool(world, toolverts, color=(0,0,255,255)):
+    # set size to fit the tool
+    # invert y axis
+    toolverts = [[(v[0],-v[1]) for v in poly] for poly in toolverts]
+    minx = min([v[0] for poly in toolverts for v in poly])
+    maxx = max([v[0] for poly in toolverts for v in poly])
+    miny = min([v[1] for poly in toolverts for v in poly])
+    maxy = max([v[1] for poly in toolverts for v in poly])
+    size = (maxx - minx, maxy - miny)
     s = pg.Surface(size)
     s.fill(WHITE)
-    def _shift_pt(p):
-        rc_p_x = p[0] + size[0] / 2
-        rc_p_y = size[1] / 2 - p[1]
-        return [int(rc_p_x), int(rc_p_y)]
+
+    # make sure the tool is centered in the surface
+    toolverts = [[(v[0] + size[0]/2.0, v[1] + size[1]/2.0) for v in poly] for poly in toolverts]
     
     for poly in toolverts:
-        vtxs = [_shift_pt(p) for p in poly]
-        pg.draw.polygon(s, color, vtxs)
+        pg.draw.polygon(s, color, poly)
     return s
-
 
 def draw_world(world, background_only=False, lighten_placed=False):
     s = pg.Surface(world.dims)
@@ -117,14 +122,30 @@ def draw_world(world, background_only=False, lighten_placed=False):
                 _draw_obj(o, s, makept)
     return s
 
-
-
-
+def makeImageArrayAsNumpy(worlddict, path, sample_ratio=1):
+    if isinstance(worlddict, VTWorld):
+        world = worlddict
+    else:
+        world = load_vt_from_dict(worlddict)
+    images = []
+    if len(path[(list(path.keys())[0])]) == 2:
+        nsteps = len(path[list(path.keys())[0]][0])
+    else:
+        nsteps = len(path[list(path.keys())[0]])
+    for i in range(0,nsteps,sample_ratio):
+        for onm, o in world.objects.items():
+            if not o.is_static():
+                o.set_pos(path[onm][i][0:2])
+                o.set_rot(path[onm][i][2])
+        img = draw_world(world)
+        imgdata = pg.surfarray.array3d(img).swapaxes(0,1)
+        images.append(imgdata)
+    return np.array(images)
 
 def makeImageArray(worlddict, path, sample_ratio=1):
-    world = loadFromDict(worlddict)
+    world = load_vt_from_dict(worlddict)
     #pg.init()
-    images = [drawWorld(world)]
+    images = [draw_world(world)]
     if len(path[(list(path.keys())[0])]) == 2:
         nsteps = len(path[list(path.keys())[0]][0])
     else:
@@ -139,20 +160,49 @@ def makeImageArray(worlddict, path, sample_ratio=1):
                 else:
                     o.setPos(path[onm][i][0:2])
                     o.setRot(path[onm][i][2])
-        images.append(drawWorld(world))
+        images.append(draw_world(world))
     return images
+
+def visualizePathSingleImageVT(worlddict, path, pathSize=3, lighten_amt=.5):
+    # set up the drawing
+    if isinstance(worlddict, VTWorld):
+        world = worlddict
+    else:
+        world = load_vt_from_dict(worlddict)
+    pg.init()
+    sc = pg.display.set_mode(world.dims)
+    img = drawPathSingleImage(worlddict, path, pathSize=3, lighten_amt=.5)
+    sc.blit(img, (0,0))
+    pg.display.flip()
+    # save the image
+    # import matplotlib.pyplot as plt
+    # pixels3d = pg.surfarray.array3d(img)
+    # pixels = pixels3d.transpose([1,0,2])
+    # plt.imshow(pixels)
+    # plt.axis('off')
+    # plt.savefig('path.svg', bbox_inches='tight', pad_inches=0, dpi=300, format='svg')
+    status = True
+    while status:
+        for e in pg.event.get():
+            if e.type == QUIT:
+                pg.quit()
+                return
+    pg.quit()
 
 def drawPathSingleImage(worlddict, path, pathSize=3, lighten_amt=.5):
     # set up the drawing
-    world = loadFromDict(worlddict)
+    if isinstance(worlddict, VTWorld):
+        world = worlddict
+    else:
+        world = load_vt_from_dict(worlddict)
     #pg.init()
     #sc = pg.display.set_mode(world.dims)
-    sc = drawWorld(world, backgroundOnly=True)
+    sc = draw_world(world, background_only=True)
     def makept(p):
         return [int(i) for i in world._invert(p)]
     # draw the paths in the background
     for onm, o in world.objects.items():
-        if not o.isStatic():
+        if not o.is_static():
             if o.type == 'Container':
                 col = o.outer_color
             else:
@@ -169,16 +219,16 @@ def drawPathSingleImage(worlddict, path, pathSize=3, lighten_amt=.5):
                 pg.draw.lines(sc, pthcol, False, pts, pathSize)
     # Draw the initial tools, lightened
     for onm, o in world.objects.items():
-        if not o.isStatic():
+        if not o.is_static():
             _draw_obj(o, sc, makept, lighten_amt=lighten_amt)
     # Draw the end tools
     for onm, o in world.objects.items():
-        if not o.isStatic():
+        if not o.is_static():
             if len(path[onm])==2:
-                o.setPos(path[onm][0][-1])
-                o.setRot(path[onm][1][-1])
+                o.set_pos(path[onm][0][-1])
+                o.set_rot(path[onm][1][-1])
             else:
-                o.setPos(path[onm][-1][0:2])
+                o.set_pos(path[onm][-1][0:2])
             _draw_obj(o, sc, makept)
     #pg.display.flip()
     #pg.quit()
@@ -186,10 +236,10 @@ def drawPathSingleImage(worlddict, path, pathSize=3, lighten_amt=.5):
 
 def drawMultiPathSingleImage(worlddict, path_set, pathSize=3, lighten_amt=.5):
     # set up the drawing
-    world = loadFromDict(worlddict)
+    world = load_vt_from_dict(worlddict)
     #pg.init()
     #sc = pg.display.set_mode(world.dims)
-    sc = drawWorld(world, backgroundOnly=True)
+    sc = draw_world(world, backgroundOnly=True)
     def makept(p):
         return [int(i) for i in world._invert(p)]
     # draw the paths in the background

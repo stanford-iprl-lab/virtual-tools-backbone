@@ -8,6 +8,7 @@ from .conditions import *
 from ..helpers import word_to_color, distance_to_object
 from copy import deepcopy
 import warnings
+import pdb
 
 __all__ = ["VTWorld", "load_vt_from_dict"]
 
@@ -135,7 +136,7 @@ class VTWorld(object):
         if closed_ends[0]:
             self.add_box("_LeftWall",[-1,-1,1,self.dims[1]+1], self.def_col, 0)
         if closed_ends[1]:
-            self.add_box("_BottomWall", [-1,-1,self.dims[0]+1, 1], self.def_col, 0);
+            self.add_box("_BottomWall", [-1,-1,self.dims[0]+1, 1], self.def_col, 0)
         if closed_ends[2]:
             self.add_box("_RightWall", [self.dims[0] - 1, -1, self.dims[0] + 1, self.dims[1] + 1], self.def_col, 0);
         if closed_ends[3]:
@@ -170,7 +171,7 @@ class VTWorld(object):
 
         Returns:
             bool: true if victory is achieved; false if not (or if no condition exists)
-        """        
+        """       
         if self.goal_cond is None:
             return False
         return self.goal_cond.is_won()
