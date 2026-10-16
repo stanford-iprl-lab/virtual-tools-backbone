@@ -135,12 +135,14 @@ def simulate_single_puzzle(set, name, variation, actions, size, tool, output_siz
     final_actions_no_tool = 0
 
     for act in tqdm(actions):
+        # the requested no-action runs are the ones at the end of `actions`;
+        # only those count toward the trailing block kept below
+        requested_no_tool = act is None
         try:
             # get path
             if act is None:
                 path_dict, _, _, wd = tp.observe_placement_path_bounding_boxes(action=act,return_world=True, stop_on_goal=False)
                 success = False
-                final_actions_no_tool += 1
             else:
                 path_dict, success, _, wd = tp.observe_placement_path_bounding_boxes(action={'tool':tool, 'position':(act[0], act[1])},return_world=True, stop_on_goal=False)
             if not path_dict:
@@ -148,21 +150,19 @@ def simulate_single_puzzle(set, name, variation, actions, size, tool, output_siz
         except (NoPathException):
             path_dict, _, _, wd = tp.observe_placement_path_bounding_boxes(action=None,return_world=True, stop_on_goal=False)
             success = False
-            final_actions_no_tool += 1
+            # this run was simulated without a tool, so record it as such
+            act = None
 
 
         # get dynamic objects list
         dynamic_objects = wd.get_dynamic_objects()
         
-        final_actions.append(act)
         img_array = makeImageArrayAsNumpy(wd, path_dict, sample_ratio=1)
         # resize images
         original_size = img_array[0].shape
         img_array = [cv2.resize(img, (output_size, output_size), interpolation=cv2.INTER_NEAREST) for img in img_array]
         img_array = np.array(img_array)
 
-        imgs.append(img_array)
-        
         act_boxes = []
         act_masks = []
 
@@ -240,9 +240,15 @@ def simulate_single_puzzle(set, name, variation, actions, size, tool, output_siz
 
         if error:
             continue  
+        # append the image and action only for runs that are kept, so that
+        # imgs, labels, boxes, masks and final_actions stay index-aligned
+        final_actions.append(act)
+        imgs.append(img_array)
         boxes.append(act_boxes)
         masks.append(act_masks)
         labels.append(1 if success else 0)
+        if requested_no_tool:
+            final_actions_no_tool += 1
 
     # return all actions without tool (placed at the end of the list) plus
     # size - number of actions without tool actions from the beginning of the list
